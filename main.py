@@ -5,6 +5,9 @@ import json
 #from aiogram.types import ParseMode, Message
 from aiogram.utils.markdown import text, bold, code
 import re 
+import random
+from dotenv import load_dotenv
+load_dotenv()
 #import pprint
 
 HEADERS = {
@@ -17,6 +20,7 @@ HEADERS = {
 
 PARAMS = [('page', 1), ('limit',5), ('genres.name', 'комедия'), ('selectFields', 'watchability.items.url'), ('selectFields', 'watchability.items.name'), ('selectFields', 'poster.url'), ('selectFields', 'name'), ('selectFields', 'description')]
 
+#print(os.environ.get("TELEGRAM_API_TOKEN"))
 bot = Bot(token=os.environ.get("TELEGRAM_API_TOKEN"))
 dp = Dispatcher(bot)
 
@@ -51,36 +55,85 @@ markup.add(*buttons)
 
 #markup.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13, item14, item15)
 
+def get_random_movie(genre):
+    HEADERS = {
+        "X-API-KEY": os.environ.get("KINOPOISK_API_KEY"),
+        "accept": "application/json",
+    }
 
-@dp.message_handler(content_types=['text'])
+    PARAMS = [
+        ("page", 1),
+        ("limit", 1),
+        ("watchability.items", "!null"),
+        ("name", "!null"),
+        ("description", "!null"),
+        ("rating.kp", "5"),
+        ("genres.name", genre),
+        ("selectFields", "name"),
+    ]
+
+    response = requests.get(
+        "https://api.kinopoisk.dev/v1/movie",
+        params=PARAMS,
+        headers=HEADERS,
+    )
+    movies = response.json()
+    total_pages = movies["total"] // movies["limit"] + (
+        1 if movies["total"] % movies["limit"] > 0 else 0
+    )
+
+    random_page = random.randint(1, total_pages)
+
+    PARAMS_FIELDS = [
+        ("page", random_page),
+        ("limit", 1),
+        ("genres.name", "комедия"),
+        ("watchability.items", "!null"),
+        ("name", "!null"),
+        ("description", "!null"),
+        ("rating.kp", "5"),
+        ("selectFields", "watchability.items.url"),
+        ("selectFields", "watchability.items.name"),
+        ("selectFields", "name"),
+        ("selectFields", "description"),
+        ("selectFields", "year"),
+        ("selectFields", "rating.kp"),
+    ]
+
+    response1 = requests.get(
+        "https://api.kinopoisk.dev/v1/movie",
+        params=PARAMS_FIELDS,
+        headers=HEADERS,
+    )
+    movies = response1.json()
+    print(movies)
+    return movies["docs"][0]
+
+
+@dp.message_handler(content_types=["text"])
 async def answer(message: types.Message):
-    if message.chat.type == 'private':
-        if message.text == '🍿 Комедии':
-            r = requests.get(url = 'https://api.kinopoisk.dev/v1.3/movie', params=PARAMS, headers=HEADERS)
-            data = r.json()
-            #name = data.get('docs')[0]['name'] 
-            film = data.get('docs')[0]
-            name = film['name']
-            description = film['description']
-            links = film['watchability']['items']
-            
+    if message.chat.type == "private":
+        if message.text == "🍿 Комедии":
+            film = get_random_movie("комедия")
+            name = film["name"]
+            year = str(film["year"])
+            rating = str(film["rating"]["kp"])
+            description = film["description"]
+            #description = "«О, Боже!!!!... Невероятно!!!... Я верила - Снежный Человек существует. Он есть!!!...Он похитил меня!!! Он добрый!!!... Мы идем знакомиться с его родителями!!!... Мне кажется,  я ему нравлюсь. Ваня - дай грибочков!!!» - вот так начинается необычайный видеорепортаж, записанный на камеру, которую случайно нашли в лесу охотники. Что это -  сенсация??? Русский Кинг-Конг??? А может быть пронзительная история  любви??? Полгода назад, где-то на Урале, в тайге, пропала тележурналистика Лариса Дебомонова. Где она  - никому не известно. Давайте досмотрим  до конца этот полуторачасовой сюжет. Возможно, мы узнаем, что же с ней случилось."
+            links = film["watchability"]["items"]
+            linksFiltered = []
+            for link in links:
+                if link not in linksFiltered:
+                    linksFiltered.append(link)
             linkUrls = list(
-                map(lambda l: f'[{l["name"]}]({l["url"]})', links)
-            )
-            resList = []
-            for item in linkUrls:
-                if item not in resList:
-                    resList.append(item)
-            
-            
-            
-            #del linkUrls[-1] #удалили последний повторяющийся элемент Kinopoisk HD из списка ссылок
-            #print(linkUrls)
+                map(lambda l: f'[{l["name"]}]({l["url"]})', linksFiltered)
+            )  #TODOfilter repetitive keys
 
-            linkUrlsJoined = "\n".join(resList)
-            #print(re.escape(linkUrlsJoined))
-            msg = f"*Название фильма:* {re.escape(name)}\n*Описание*: {re.escape(description)}\n*Просмотр*\:\n{linkUrlsJoined}"
+            linkUrlsJoined = "\n".join(linkUrls)
+            print(links, linkUrls, linkUrlsJoined)
+            msg = f"*{re.escape(name)}, {re.escape(year)}*\n*Рейтинг КиноПоиска: {re.escape(rating)}*\n{re.escape(description)}\n*Просмотр*\:\n{linkUrlsJoined}"
             await message.answer(msg, parse_mode="MarkdownV2")
+            #await message.answer(movie)
             #name = "1\\+\\1"
             #md = "*Название фильма:* "
             #fin = ''.join([md, name])
