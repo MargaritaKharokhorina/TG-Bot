@@ -4,8 +4,9 @@ import os
 import json
 #from aiogram.types import ParseMode, Message
 from aiogram.utils.markdown import text, bold, code
-import re 
+#import re 
 import random
+from aiogram import md
 from dotenv import load_dotenv
 load_dotenv()
 #import pprint
@@ -67,7 +68,7 @@ def get_random_movie(genre):
         ("watchability.items", "!null"),
         ("name", "!null"),
         ("description", "!null"),
-        ("rating.kp", "5"),
+        ("rating.kp", "5-10"),
         ("genres.name", genre),
         ("selectFields", "name"),
     ]
@@ -91,7 +92,7 @@ def get_random_movie(genre):
         ("watchability.items", "!null"),
         ("name", "!null"),
         ("description", "!null"),
-        ("rating.kp", "5"),
+        ("rating.kp", "5-10"),
         ("selectFields", "watchability.items.url"),
         ("selectFields", "watchability.items.name"),
         ("selectFields", "name"),
@@ -115,24 +116,53 @@ async def answer(message: types.Message):
     if message.chat.type == "private":
         if message.text == "🍿 Комедии":
             film = get_random_movie("комедия")
-            name = film["name"]
-            year = str(film["year"])
-            rating = str(film["rating"]["kp"])
-            description = film["description"]
-            #description = "«О, Боже!!!!... Невероятно!!!... Я верила - Снежный Человек существует. Он есть!!!...Он похитил меня!!! Он добрый!!!... Мы идем знакомиться с его родителями!!!... Мне кажется,  я ему нравлюсь. Ваня - дай грибочков!!!» - вот так начинается необычайный видеорепортаж, записанный на камеру, которую случайно нашли в лесу охотники. Что это -  сенсация??? Русский Кинг-Конг??? А может быть пронзительная история  любви??? Полгода назад, где-то на Урале, в тайге, пропала тележурналистика Лариса Дебомонова. Где она  - никому не известно. Давайте досмотрим  до конца этот полуторачасовой сюжет. Возможно, мы узнаем, что же с ней случилось."
+            name = md.escape_md(film["name"])
+            year = md.escape_md(str(film["year"]))
+            rating = md.escape_md(round(film["rating"]["kp"]))
+            description = md.escape_md(film["description"])
             links = film["watchability"]["items"]
             linksFiltered = []
             for link in links:
                 if link not in linksFiltered:
                     linksFiltered.append(link)
-            linkUrls = list(
-                map(lambda l: f'[{l["name"]}]({l["url"]})', linksFiltered)
-            )  #TODOfilter repetitive keys
-
+            linkUrls = list(map(lambda l: f'[{md.escape_md(l["name"])}]({l["url"]})', linksFiltered))
             linkUrlsJoined = "\n".join(linkUrls)
-            print(links, linkUrls, linkUrlsJoined)
-            msg = f"*{re.escape(name)}, {re.escape(year)}*\n*Рейтинг КиноПоиска: {re.escape(rating)}*\n{re.escape(description)}\n*Просмотр*\:\n{linkUrlsJoined}"
-            await message.answer(msg, parse_mode="MarkdownV2")
+
+            msg = f"*{(name)}, {year}*\n*Рейтинг КиноПоиска: {(rating)}*\n{(description)}\n*Просмотр*\:\n{linkUrlsJoined}"
+            try:
+                await message.answer(msg, parse_mode= "MarkdownV2")
+            except Exception as inst:
+                await message.answer(
+                    "Кина не будет", parse_mode= "MarkdownV2"
+                )
+            print('message', msg, "\nlinks", linkUrlsJoined)
+            print(inst)
+            raise
+
+            
+           
+            
+            
+            
+#             name = film["name"]
+#             year = str(film["year"])
+#             rating = str(film["rating"]["kp"])
+#             description = film["description"]
+#             #description = "«О, Боже!!!!... Невероятно!!!... Я верила - Снежный Человек существует. Он есть!!!...Он похитил меня!!! Он добрый!!!... Мы идем знакомиться с его родителями!!!... Мне кажется,  я ему нравлюсь. Ваня - дай грибочков!!!» - вот так начинается необычайный видеорепортаж, записанный на камеру, которую случайно нашли в лесу охотники. Что это -  сенсация??? Русский Кинг-Конг??? А может быть пронзительная история  любви??? Полгода назад, где-то на Урале, в тайге, пропала тележурналистика Лариса Дебомонова. Где она  - никому не известно. Давайте досмотрим  до конца этот полуторачасовой сюжет. Возможно, мы узнаем, что же с ней случилось."
+#             links = film["watchability"]["items"]
+#             linksFiltered = []
+#             for link in links:
+#                 if link not in linksFiltered:
+#                     linksFiltered.append(link)
+#             linkUrls = list(
+#                 map(lambda l: f'[{l["name"]}]({l["url"]})', linksFiltered)
+#             )  #TODOfilter repetitive keys
+
+#             linkUrlsJoined = "\n".join(linkUrls)
+#             print(links, linkUrls, linkUrlsJoined)
+#             msg = f"*{md.escape_md(name)}, {md.escape_md(year)}*\n*Рейтинг КиноПоиска: {md.escape_md(rating)}*\n{md.escape_md(description)}"
+# #*Просмот#р*\:\n{linkUrlsJoined}"
+#             await message.answer(msg, parse_mode="MarkdownV2")
             #await message.answer(movie)
             #name = "1\\+\\1"
             #md = "*Название фильма:* "
@@ -141,6 +171,9 @@ async def answer(message: types.Message):
             #msg = f"*Название фильма:* {re.escape(name)}"
             #await message.answer("Hello, *world*\!", parse_mode= "MarkdownV2")!!!!+
             #await message.answer(msg, parse_mode= "MarkdownV2")
+
+            
+
 
             
 
