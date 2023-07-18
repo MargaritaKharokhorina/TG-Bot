@@ -31,11 +31,28 @@ dp = Dispatcher(bot)
 async def send_welcome(message: types.Message):
     await bot.send_message(message.chat.id, 'Привет, {0.first_name}!\nЯ бот, который поможет тебе выбрать фильм на вечер.\nВыбери в меню жанр 🎬'.format(message.from_user), reply_markup=markup)
 
+
 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-buttons = ['🍿 Комедии', '💔 Мелодрама']
+def get_genres_list():
+    PARAMS = [("field", "genres.name")]
+    response = requests.get(
+        "https://api.kinopoisk.dev/v1/movie/possible-values-by-field",
+        params=PARAMS,
+        headers=HEADERS,
+    )
+    genres_list = response.json()
+    return genres_list
+
+genres = get_genres_list()
+buttons = map(lambda l: l["name"], genres)
 markup.add(*buttons)
 
+# buttons = get_genres_list()
+# markup.add(*buttons)
+# print(type(buttons))
 
+#buttons = ['🍿 Комедии', '💔 Мелодрама']
+#markup.add(*buttons)
 
 #markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
 #item1 = types.KeyboardButton('🍿 Комедии')
@@ -88,7 +105,7 @@ def get_random_movie(genre):
     PARAMS_FIELDS = [
         ("page", random_page),
         ("limit", 1),
-        ("genres.name", "комедия"),
+        ("genres.name", genre),
         ("watchability.items", "!null"),
         ("name", "!null"),
         ("description", "!null"),
@@ -114,75 +131,32 @@ def get_random_movie(genre):
 @dp.message_handler(content_types=["text"])
 async def answer(message: types.Message):
     if message.chat.type == "private":
-        if message.text == "🍿 Комедии":
-            film = get_random_movie("комедия")
-            name = md.escape_md(film["name"])
-            year = md.escape_md(str(film["year"]))
-            rating = md.escape_md(round(film["rating"]["kp"]))
-            description = md.escape_md(film["description"])
-            links = film["watchability"]["items"]
-            linksFiltered = []
-            for link in links:
+        print(genres)
+        film = get_random_movie(message.text)
+        name = md.escape_md(film["name"])
+        year = md.escape_md(str(film["year"]))
+        rating = md.escape_md(round(film["rating"]["kp"]))
+        description = md.escape_md(film["description"])
+        links = film["watchability"]["items"]
+        linksFiltered = []
+        for link in links:
                 if link not in linksFiltered:
                     linksFiltered.append(link)
-            linkUrls = list(map(lambda l: f'[{md.escape_md(l["name"])}]({l["url"]})', linksFiltered))
-            linkUrlsJoined = "\n".join(linkUrls)
+        linkUrls = list(map(lambda l: f'[{md.escape_md(l["name"])}]({l["url"]})', linksFiltered))
+        linkUrlsJoined = "\n".join(linkUrls)
 
-            msg = f"*{(name)}, {year}*\n*Рейтинг КиноПоиска: {(rating)}*\n{(description)}\n*Просмотр*\:\n{linkUrlsJoined}"
-            try:
+        msg = f"*{(name)}, {year}*\n*Рейтинг КиноПоиска: {(rating)}*\n{(description)}\n*Просмотр*\:\n{linkUrlsJoined}"
+        try:
                 await message.answer(msg, parse_mode= "MarkdownV2")
-            except Exception as inst:
+        except Exception as inst:
                 await message.answer(
                     "Кина не будет", parse_mode= "MarkdownV2"
+
                 )
-            print('message', msg, "\nlinks", linkUrlsJoined)
-            print(inst)
-            raise
+                print('message', msg, "\nlinks", linkUrlsJoined)
+                print(inst)
+                raise
 
-            
-           
-            
-            
-            
-#             name = film["name"]
-#             year = str(film["year"])
-#             rating = str(film["rating"]["kp"])
-#             description = film["description"]
-#             #description = "«О, Боже!!!!... Невероятно!!!... Я верила - Снежный Человек существует. Он есть!!!...Он похитил меня!!! Он добрый!!!... Мы идем знакомиться с его родителями!!!... Мне кажется,  я ему нравлюсь. Ваня - дай грибочков!!!» - вот так начинается необычайный видеорепортаж, записанный на камеру, которую случайно нашли в лесу охотники. Что это -  сенсация??? Русский Кинг-Конг??? А может быть пронзительная история  любви??? Полгода назад, где-то на Урале, в тайге, пропала тележурналистика Лариса Дебомонова. Где она  - никому не известно. Давайте досмотрим  до конца этот полуторачасовой сюжет. Возможно, мы узнаем, что же с ней случилось."
-#             links = film["watchability"]["items"]
-#             linksFiltered = []
-#             for link in links:
-#                 if link not in linksFiltered:
-#                     linksFiltered.append(link)
-#             linkUrls = list(
-#                 map(lambda l: f'[{l["name"]}]({l["url"]})', linksFiltered)
-#             )  #TODOfilter repetitive keys
-
-#             linkUrlsJoined = "\n".join(linkUrls)
-#             print(links, linkUrls, linkUrlsJoined)
-#             msg = f"*{md.escape_md(name)}, {md.escape_md(year)}*\n*Рейтинг КиноПоиска: {md.escape_md(rating)}*\n{md.escape_md(description)}"
-# #*Просмот#р*\:\n{linkUrlsJoined}"
-#             await message.answer(msg, parse_mode="MarkdownV2")
-            #await message.answer(movie)
-            #name = "1\\+\\1"
-            #md = "*Название фильма:* "
-            #fin = ''.join([md, name])
-            #msg = f"*Название фильма:* {name.encode('unicode_escape')}"
-            #msg = f"*Название фильма:* {re.escape(name)}"
-            #await message.answer("Hello, *world*\!", parse_mode= "MarkdownV2")!!!!+
-            #await message.answer(msg, parse_mode= "MarkdownV2")
-
-            
-
-
-            
-
-#@dp.message_handler(content_types=['text'])
-
-#def 
-
-#async def answer(message: types.Message):
-    #await message.answer(message.text)      this is echo
 
 if __name__ == '__main__':
    executor.start_polling(dp, skip_updates=True)
