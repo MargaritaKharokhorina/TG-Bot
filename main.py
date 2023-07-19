@@ -1,15 +1,13 @@
 from aiogram import Bot, Dispatcher, executor, types
 import requests
 import os 
-import json
-#from aiogram.types import ParseMode, Message
 from aiogram.utils.markdown import text, bold, code
 #import re 
 import random
 from aiogram import md
 from dotenv import load_dotenv
 load_dotenv()
-#import pprint
+
 
 HEADERS = {
     "X-API-KEY": os.environ.get("KINOPOISK_API_KEY"),
@@ -45,33 +43,12 @@ def get_genres_list():
 
 genres = get_genres_list()
 buttons = map(lambda l: l["name"], genres)
+#buttons = list(map(str.title, buttons))
+#for elem in buttons:
+    #print(elem)
 markup.add(*buttons)
 
-# buttons = get_genres_list()
-# markup.add(*buttons)
-# print(type(buttons))
 
-#buttons = ['🍿 Комедии', '💔 Мелодрама']
-#markup.add(*buttons)
-
-#markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-#item1 = types.KeyboardButton('🍿 Комедии')
-#item2 = types.KeyboardButton('💔 Мелодрама')
-#item3 = types.KeyboardButton('🤍 Драма')
-#item4 = types.KeyboardButton('🔍 Детектив')
-#item5 = types.KeyboardButton('🤫 Триллер')
-#item6 = types.KeyboardButton('😱 Ужасы')
-#item7 = types.KeyboardButton('💣 Боевик')
-#item8 = types.KeyboardButton('☄️ Фантастика')
-#item9 = types.KeyboardButton('👀 Приключения')
-#item10 = types.KeyboardButton('⏳ Исторические')
-#item11 = types.KeyboardButton('📝 Документальные')
-#item12 = types.KeyboardButton('🏆 Спортивные')
-#item13 = types.KeyboardButton('🎥 Артхаус')
-#item14 = types.KeyboardButton('🎵 Мюзикл')
-#item15 = types.KeyboardButton('🧁 Мультфильмы')
-
-#markup.add(item1, item2, item3, item4, item5, item6, item7, item8, item9, item10, item11, item12, item13, item14, item15)
 
 def get_random_movie(genre):
     HEADERS = {
@@ -124,18 +101,18 @@ def get_random_movie(genre):
         headers=HEADERS,
     )
     movies = response1.json()
-    print(movies)
+    #print(movies)
     return movies["docs"][0]
 
 
 @dp.message_handler(content_types=["text"])
 async def answer(message: types.Message):
     if message.chat.type == "private":
-        print(genres)
+        #print(genres)
         film = get_random_movie(message.text)
         name = md.escape_md(film["name"])
         year = md.escape_md(str(film["year"]))
-        rating = md.escape_md(round(film["rating"]["kp"]))
+        rating = md.escape_md(round(film["rating"]["kp"], 1))
         description = md.escape_md(film["description"])
         links = film["watchability"]["items"]
         linksFiltered = []
